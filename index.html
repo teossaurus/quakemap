@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+class {
+  .subunit.CAN { fill: #ddc; }
+}
+
+
+
+</style>
+<body>
+<script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
+<script src="//d3js.org/topojson.v1.min.js"></script>
+<script>
+
+var timeFactor = 45
+
+var mapColor = "#C7BD7B"
+
+var width = 1280,
+    height = 720;
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+svg.append("rect")
+    .attr("width", "100%")
+    .attr("height", "100%")
+    .attr('fill', mapColor)
+    .style('opacity',0.1);
+
+var projection = d3.geo.mercator();
+
+var path = d3.geo.path()
+    .projection(projection);
+
+var factor = 10.5
+
+projection
+    .center([-120, 37])
+    .translate([width*0.5,height*0.65])
+    .scale(150*factor);
+
+
+function rand(array){
+  return array[Math.floor(Math.random() * array.length)]
+}
+
+colors = ['#FFB777','#D7E8A2','#7FFFFD','#A768E8']
+
+function sizer(i){
+  if (i < 1){
+    return 1
+  }
+
+  else {
+    return i
+  }
+
+}
+
+function rangeMaker(center,mag){
+  xCenter = center[0]
+  yCenter = center[1]
+  radius = mag * sizer(mag * .35) * 12
+
+  myArray = [];
+
+  for (x = xCenter - radius ; x <= xCenter; x++) {
+      for (y = yCenter - radius ; y <= yCenter; y++) {
+          if ((x - xCenter)*(x - xCenter) + (y - yCenter)*(y - yCenter) <= radius*radius) {
+              xSym = xCenter - (x - xCenter);
+              ySym = yCenter - (y - yCenter);
+              [[x, y], [x, ySym], [xSym , y], [xSym, ySym]].forEach(function(d){
+                myArray.push(d)
+              });
+          }
+      }
+  }
+
+  return myArray
+}
+
+
+function triMaker(n,universe,time){
+  for (x = 0; x < n; x++) {
+    coordinates = []
+    for (i = 0; i < 6; i++) {
+      coordinates.push(rand(universe))
+    }
+
+    svg.append("polygon")
+      .attr("points", coordinates)
+      .style('fill', rand(colors))
+      .style('opacity', 0)
+      .transition()
+        .delay(time/timeFactor)
+        .style('opacity',0.8)
+        .duration(1500)
+        .transition()
+          .style('opacity',0.3)
+          .duration(1200);
+
+  }
+}
+
+
+d3.json("us.json", function(error, us) {
+
+  var subunits = topojson.feature(us, us.objects.subunits_na);
+
+  console.log(subunits)
+
+  svg.append("path")
+      .datum(subunits)
+      .attr("d", path)
+      .attr("class", function(d) { return "subunit " + d.id; })
+      .attr('fill',mapColor)
+      .style('opacity',0.3);
+
+
+  d3.csv("data.csv", function(data) {
+    data.forEach(function(d) {
+      d.lat = +d.lat;
+      d.lon = +d.lon;
+      d.mag = +d.mag;
+      d.coord = [d.lon,d.lat];
+      d.t = +d.t;
+      });
+
+    data.forEach(function(d){
+      point = projection(d.coord)
+      triMaker(d.mag * d.mag,rangeMaker(point,d.mag), d.t)
+
+      
+
+    });
+
+
+
+
+  });
+
+});
+
+
+
+
+
+
+
+</script>
